@@ -1,0 +1,39 @@
+service cloud.firestore {
+  match /databases/{database}/documents 
+  {
+  	function getRole(role) {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.roles[role]
+    }
+      
+      
+    match /prospects/{prospectId} {
+    	allow read, write: if request.auth.uid == resource.data.createdBy;
+      allow create: if request.auth.uid != null;
+    }
+    
+    match /curriculum/{curriculumId} {
+      allow read;
+      allow write: if getRole('admin') == true 
+    }
+    
+    match /topics/{topicId} {
+    	allow read, write: if request.auth.uid == resource.data.createdBy;
+      allow create: if request.auth.uid != null;
+    }
+    
+    match /costs/{costId} {
+    	allow read, write: if getRole('finance') == true;
+    }
+    
+    match /users/{document} {
+      allow read;
+      allow create: if request.resource.data.roles.keys().hasAny(['founder', 'admin', 'employee', 'sales', 'content_manager', 'content_developer', 'expense_creator']) == false;
+      allow update: if getRole('founder') == true || getRole('admin') == true;
+    }
+    
+    match /user-views/{userId}/{someColl}/{someObj} {
+      allow read: if request.auth.uid == userId || getRole('content_manager') || getRole('admin');
+      allow write: if getRole('content_manager') || getRole('admin');
+  	}
+  }
+}
